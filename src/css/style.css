@@ -1,0 +1,20 @@
+* {
+	margin: 0;
+	padding: 0;
+}
+
+body,
+html {
+	overflow-x: hidden;
+	background-color: red;
+
+	/* transform: translateZ(0);
+	backface-visibility: hidden; */
+}
+
+#webgl {
+	max-width: 100%;
+	/* max-height: 10%; */
+	/* clear: both;
+	float: right; */
+}

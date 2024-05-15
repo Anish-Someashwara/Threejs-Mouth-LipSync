@@ -15,6 +15,7 @@ export class ThreeEnvSetup {
 		}
 		ThreeEnvSetup.instance = this;
 
+		this.clock = new THREE.Clock();
 		this.canvas = canvas;
 		this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x3a3d3b);
@@ -101,8 +102,10 @@ export class ThreeEnvSetup {
 	}
 
 	update() {
+		let mixerUpdateDelta = this.clock.getDelta();
+
 		if (this.controls) this.controls.update();
-		if(this.MaterialEnvTestIns) this.MaterialEnvTestIns.update();
+		if(this.MaterialEnvTestIns) this.MaterialEnvTestIns.update(mixerUpdateDelta);
 		this.renderer.render(this.scene, this.camera);
 		window.requestAnimationFrame(() => {
 			this.update();

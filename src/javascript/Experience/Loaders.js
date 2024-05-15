@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader'
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { AudioLoader } from 'three';
 
 
@@ -16,7 +17,12 @@ export default class Loaders {
     }
 
     setupLoaders(){
+        const dracoLoader = new DRACOLoader();
+        dracoLoader.setDecoderPath( 'https://unpkg.com/three@0.160.x/examples/jsm/libs/draco/gltf/' );
+
 		this.gltfLoader = new GLTFLoader();
+        this.gltfLoader.setDRACOLoader( dracoLoader );
+
         this.fbxLoader = new FBXLoader()
         this.audioLoader = new AudioLoader();
         this.fileLoader = new THREE.FileLoader()

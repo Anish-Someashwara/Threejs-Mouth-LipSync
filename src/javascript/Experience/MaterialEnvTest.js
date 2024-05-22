@@ -1,13 +1,11 @@
 import * as THREE from "three";
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
-import { gsap } from "gsap";
 // import createAnimation from "./AnimationConvertor";
 import createAnimation2 from "./AnimationConvertor";
 import { AnimationClip, NumberKeyframeTrack } from "three";
 
 // Custom Scripts
 import Loaders from "./Loaders";
-import { Face } from "three/examples/jsm/Addons.js";
 
 // For manInShorts.glb model
 // const VISEME_DATA = {
@@ -60,39 +58,13 @@ export default class MaterialEnvTest {
 	}
 
 	async addModel() {
-		// let model = await this.loaders.loadGltfByUrl("/models/model.glb");
-		let model = await this.loaders.loadGltfByUrl("/models/FacialExp4.gltf");
+		let gltf = await this.loaders.loadGltfByUrl("/models/FacialExp7.gltf");
 
-		model = model.scene;
+		const model = gltf.scene;
 		this.scene.add(model);
-		// model.rotation.y = -Math.PI/2
-		// model.scale.set(0.1,0.1,0.1)
-		// model.position.y = -3;
 		model.scale.set(10, 10, 10);
 		model.position.y = -16;
-		console.log(model);
-
-		// model.traverse( ( child ) => {
-		//     if (child.isMesh) {
-		// 		console.log("Hhh")
-		//         const mesh = child;
-		//         // mesh.material.skinning = true;
-		//         mesh.material.morphTargets = true;
-		//     }
-		// });
-
-		// const morphObj = model.getObjectByName("Face");
-		// const morphAttributes = morphObj.geometry.morphAttributes;
-		// morphObj.material.morphTargets = true;
-
-		// console.log(morphObj)
-		// this.mixer = new THREE.AnimationMixer(model);
-		// var sequence = THREE.AnimationClip.CreateFromMorphTargetSequence('animation', morphAttributes, 60, true);
-		// var animation = this.mixer.clipAction(sequence);
-		// animation.setLoop(THREE.LoopOnce)
-		// animation.setDuration(6)
-		// animation.clampWhenFinished = true
-		// animation.play()
+		console.log(gltf);
 
 		// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// this.face = model.getObjectByName("HG_Body");
@@ -118,74 +90,61 @@ export default class MaterialEnvTest {
 		this.morphDict = this.face.morphTargetDictionary;
 		this.morphInf = this.face.morphTargetInfluences;
 		this.mixer = new THREE.AnimationMixer(model);
+		console.log(this.morphDict);
 
-		
 		let finishedFrames = 0;
 		const numFrames = 60; // Number of frames for smooth animation
 		const animation = [];
 		const tracks = [];
 		let time = [];
 
+		for (let i = 0; i < Object.keys(this.morphDict).length; i++)
+			animation.push([]);
 
-		for (let i = 0; i < Object.keys(this.morphDict).length; i++) animation.push([]);
-
-		// Define the keyframes for the 'L' animation
 		this.lipSyncJson.mouthCues.forEach((cue) => {
-			for (let i = 0; i <= numFrames - 1; i++) {
+			const startTime = cue.start;
+			const endTime = cue.end;
+			const noOfSecs = endTime - startTime;
+			const noOfFrames = noOfSecs * numFrames;
+
+			for (let i = 0; i <= noOfFrames; i++) {
 				animation[this.morphDict[VISEME_DATA[cue.value]]].push(
-					i / (numFrames - 1)
+					i / (noOfFrames - 1)
 				); // Linear interpolation from 0 to 1
+				Object.entries(this.morphDict).forEach(([key]) => {
+					if (key !== VISEME_DATA[cue.value])
+						animation[this.morphDict[key]].push(0);
+				});
+
+				time.push(finishedFrames / numFrames);
+				finishedFrames++;
 			}
-			time.push(finishedFrames / numFrames);
-			finishedFrames++;
 		});
 
-		console.log(animation, time);
+		Object.entries(this.morphDict).forEach(([key]) => {
+			let i = this.morphDict[key];
+			let track = new NumberKeyframeTrack(
+				`${"Face"}.morphTargetInfluences[${i}]`,
+				time,
+				animation[i]
+			);
+			tracks.push(track);
+		});
 
-	
-		
-		for (let i = 0; i < Object.keys(this.morphDict).length; i++) {
-			console.log(i, animation[i].length)
-			if (animation[i].length > 0) {
-				const track = new THREE.NumberKeyframeTrack(
-					`Face.morphTargetInfluences[${i}]`,
-					[0.1, 0.2, 0.3, 0.4], 
-					animation[i] 
-				);
-				tracks.push(track);
-			}
-		}
+		console.log("********* Animations *********", animation);
+		console.log("********* TIME *********", time);
+		console.log("********* Frames *********", finishedFrames);
+		console.log("********* tracks *********", tracks);
 
-		// const track = new THREE.NumberKeyframeTrack(
-		// 	`Face.morphTargetInfluences[${1}]`,
-		// 	[0.1, 0.2, 0.3, 0.4, ], 
-		// 	animation[7] 
-		// );
-
-		// const track2 = new THREE.NumberKeyframeTrack(
-		// 	`Face.morphTargetInfluences[${2}]`,
-		// 	[0.1, 0.2, 0.3, 0.4, ], 
-		// 	animation[2] 
-		// );
-		// tracks.push(track);
-		// tracks.push(track2);
-
-		// console.log(tracks)
-		const clip = new THREE.AnimationClip(
-			"lip_sync_animation",
-			this.lipSyncJson.metadata.duration,
-			tracks
-		);
-		
-		const action = this.mixer.clipAction(clip);
+		const clip = new AnimationClip("animation", -1, tracks);
+		let action = this.mixer.clipAction(clip);
 		action.play();
-		// action.loop = THREE.LoopOnce
+		action.loop = THREE.LoopOnce;
 
-		this.mixer.addEventListener('finished', (e)=>{console.log("finished", e)})
-
+		this.mixer.addEventListener("finished", (e) => {
+			console.log("finished", e);
+		});
 		// *******************************************************************************************
-
-
 
 		console.log("Model Setup Done!");
 		return Promise.resolve("Model Setup Done!");
@@ -273,6 +232,20 @@ export default class MaterialEnvTest {
 		floor.rotation.x = -Math.PI / 2;
 		this.scene.add(floor);
 	}
+
+	update(delta) {
+		if (this.mixer) this.mixer.update(delta);
+		// if(this.audio){
+		// 	if (this.controls.play) this.audio.play();
+		// 	else this.audio.stop();
+		// }
+
+		// if (this.allResourcesLoaded) {
+		// 	// this.playLipSyncAnimation();
+		// }
+	}
+
+	// ************************************* LipSync In Update Code *************************************
 
 	playLipSyncAnimation() {
 		console.log(this.audio.isPlaying);
@@ -405,17 +378,5 @@ export default class MaterialEnvTest {
 		return null; // Timestamp not found in any object
 	}
 
-	update(delta) {
-		// console.log(delta)
-		if (this.mixer) this.mixer.update(delta);
-		// console.log(this.controls)
-		// if(this.audio){
-		// 	if (this.controls.play) this.audio.play();
-		// 	else this.audio.stop();
-		// }
-		// console.log("hi")
-		// if (this.allResourcesLoaded) {
-		// 	// this.playLipSyncAnimation();
-		// }
-	}
+	// ************************************* LipSync In Update Code *************************************
 }
